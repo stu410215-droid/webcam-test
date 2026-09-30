@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>攝影鏡頭讀取測試</title>
+  <style>
+    body {
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background-color: #f4f4f9;
+    }
+    .video-container {
+      position: relative;
+      margin-top: 20px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #000;
+    }
+    video {
+      width: 100%;
+      max-width: 640px;
+      height: auto;
+      display: block;
+    }
+    .controls {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    #stopBtn {
+      background-color: #dc3545;
+    }
+    #stopBtn:hover {
+      background-color: #a71d2a;
+    }
+    #statusMsg {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>攝影鏡頭即時預覽</h2>
+
+  <div class="video-container">
+    <video id="webcamVideo" autoplay playsinline muted></video>
+  </div>
+
+  <div class="controls">
+    <button id="startBtn" onclick="startCamera()">開啟鏡頭</button>
+    <button id="stopBtn" onclick="stopCamera()" disabled>關閉鏡頭</button>
+  </div>
+
+  <div id="statusMsg"></div>
+
+  <script>
+    let currentStream = null;
+
+    async function startCamera() {
+      const videoElement = document.getElementById('webcamVideo');
+      const statusMsg = document.getElementById('statusMsg');
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('stopBtn');
+
+      // 檢查瀏覽器是否支援 getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        statusMsg.style.color = 'red';
+        statusMsg.innerText = '您的瀏覽器不支援讀取攝影鏡頭 API！';
+        return;
+      }
+
+      try {
+        statusMsg.style.color = 'blue';
+        statusMsg.innerText = '正在請求攝影鏡頭權限...';
+
+        // 請求攝影鏡頭 (影像: 是, 聲音: 否)
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user' // 'user' 為前鏡頭，若要後鏡頭改用 'environment'
+          },
+          audio: false
+        });
+
+        currentStream = stream;
+        videoElement.srcObject = stream;
+
+        statusMsg.style.color = 'green';
+        statusMsg.innerText = '攝影鏡頭已順利開啟！';
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      } catch (error) {
+        console.error('開啟鏡頭失敗:', error);
+        statusMsg.style.color = 'red';
+
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          statusMsg.innerText = '錯誤：使用者拒絕了攝影鏡頭的使用權限。';
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          statusMsg.innerText = '錯誤：找不到可用的攝影鏡頭設備。';
+        } else {
+          statusMsg.innerText = '開啟鏡頭失敗：' + error.message;
+        }
+      }
+    }
+
+  function stopCamera() {
+    const videoElement = document.getElementById('webcamVideo');
+    const statusMsg = document.getElementById('statusMsg');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+
+    if (currentStream) {
+      // 停止所有串流軌道
+      currentStream.getTracks().forEach(track => track.stop());
+      currentStream = null;
+      videoElement.srcObject = null;
+
+      statusMsg.style.color = 'black';
+      statusMsg.innerText = '攝影鏡頭已關閉。';
+
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
+  }
+  </script>
+
+</body>
+</html>
